@@ -15,7 +15,8 @@ import {
   Youtube, 
   Music, 
   Monitor, 
-  ExternalLink 
+  ExternalLink,
+  Github
 } from 'lucide-react';
 import { PdfPage, OutputFormat, AppState } from './types';
 
@@ -79,7 +80,7 @@ const App: React.FC = () => {
 
       for (let i = 1; i <= numPages; i++) {
         const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2.0 }); 
+        const viewport = page.getViewport({ scale: 2.5 }); 
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         
@@ -98,7 +99,6 @@ const App: React.FC = () => {
           });
         }
         
-        // Cập nhật giao diện theo đợt để mượt mà hơn
         if (i % 3 === 0 || i === numPages) {
           const currentPages = [...pages];
           setState(prev => ({ ...prev, pages: currentPages }));
@@ -108,7 +108,7 @@ const App: React.FC = () => {
       setState(prev => ({ ...prev, isProcessing: false }));
     } catch (error) {
       console.error('Error processing PDF:', error);
-      alert('Có lỗi xảy ra khi đọc file PDF. Hãy đảm bảo file không bị hỏng và thử lại.');
+      alert('Có lỗi xảy ra khi đọc file PDF. Vui lòng kiểm tra lại file.');
       setState(prev => ({ ...prev, isProcessing: false }));
     }
   };
@@ -149,12 +149,12 @@ const App: React.FC = () => {
 
         setResult({
           id: vidId,
-          title: "Video YouTube đã sẵn sàng",
+          title: "Video YouTube",
           author: "YouTube Creator",
           cover: `https://img.youtube.com/vi/${vidId}/maxresdefault.jpg`,
           formats: [
-            { quality: 'Video MP4 (Chất lượng cao)', url: `https://api.vve.pw/api/button/mp4/${vidId}`, type: 'video' },
-            { quality: 'Âm thanh MP3 (320kbps)', url: `https://api.vve.pw/api/button/mp3/${vidId}`, type: 'audio' }
+            { quality: 'Video MP4 (HD)', url: `https://api.vve.pw/api/button/mp4/${vidId}`, type: 'video' },
+            { quality: 'Âm thanh MP3', url: `https://api.vve.pw/api/button/mp3/${vidId}`, type: 'audio' }
           ]
         });
       }
@@ -262,7 +262,7 @@ const App: React.FC = () => {
               <h1 className="text-xl font-black text-slate-800 tracking-tight uppercase">
                 Nhutcoder <span className="text-red-600">Toolbox</span>
               </h1>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">V.5.2 Stable Build</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">V.5.4 Stable Build</span>
             </div>
           </div>
 
@@ -293,9 +293,9 @@ const App: React.FC = () => {
                 <h2 className="text-4xl sm:text-6xl font-black text-slate-900 mb-6 tracking-tight uppercase leading-tight">
                   PDF Sang <span className="text-red-600 underline decoration-red-100">Ảnh</span>
                 </h2>
-                <p className="text-lg text-slate-500 font-medium italic">"Tốc độ cao, bảo mật, hoàn toàn ngoại tuyến."</p>
+                <p className="text-lg text-slate-500 font-medium italic">"Xử lý cục bộ trên trình duyệt, không tải file lên máy chủ."</p>
                 <div className="mt-4 inline-block bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
-                  Privacy First • No AI Required
+                  Privacy First • Offline Conversion
                 </div>
               </div>
 
@@ -308,11 +308,11 @@ const App: React.FC = () => {
                 <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && processPdf(e.target.files[0])} />
                 <div className="bg-red-50 p-10 rounded-[2.5rem] text-red-600 mb-8 group-hover:rotate-6 transition-transform duration-300 shadow-inner"><FileUp size={64} /></div>
                 <p className="text-2xl font-black text-slate-800 mb-2">Thả file PDF vào đây</p>
-                <p className="text-slate-400 font-bold text-sm tracking-widest uppercase">Nhấn để chọn file từ thiết bị</p>
+                <p className="text-slate-400 font-bold text-sm tracking-widest uppercase">Nhấn để chọn file từ máy tính/điện thoại</p>
                 {state.isProcessing && (
                   <div className="mt-10 flex flex-col items-center">
                     <Loader2 className="animate-spin text-red-600 mb-4" size={48} />
-                    <span className="font-bold text-slate-700 text-lg">Đang trích xuất dữ liệu...</span>
+                    <span className="font-bold text-slate-700 text-lg">Đang trích xuất ảnh...</span>
                   </div>
                 )}
               </form>
@@ -339,7 +339,7 @@ const App: React.FC = () => {
                   </div>
                   <button onClick={downloadAllPdf} className="flex items-center justify-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-xl font-black shadow-xl hover:bg-red-600 transition-all flex-1 sm:flex-none">
                     <Download size={18} />
-                    Tải Tất Cả
+                    Tải Toàn Bộ
                   </button>
                   <button onClick={() => setState(s => ({ ...s, pages: [], fileName: '' }))} className="p-4 bg-white border-2 border-slate-100 text-slate-400 hover:text-red-600 rounded-xl transition-all">
                     <Trash2 size={24} />
@@ -375,7 +375,7 @@ const App: React.FC = () => {
                   {mode === 'tiktok' ? 'Tải TikTok No Watermark' : 'YouTube Downloader'}
                 </div>
                 <h2 className="text-4xl sm:text-6xl font-black text-slate-900 mb-6 tracking-tight leading-tight uppercase">
-                   {mode === 'tiktok' ? 'Tải TikTok' : 'Tải YouTube'} <span className="text-red-600 underline decoration-red-100">Cực Nhanh</span>
+                   {mode === 'tiktok' ? 'Tải TikTok' : 'Tải YouTube'} <span className="text-red-600 underline decoration-red-100">Siêu Tốc</span>
                 </h2>
               </div>
 
@@ -463,13 +463,24 @@ const App: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-12 text-center md:text-left">
             <div className="flex flex-col items-center md:items-start gap-4">
               <span className="font-black text-2xl text-slate-800 uppercase tracking-tighter">Nhutcoder Toolbox</span>
-              <p className="text-slate-500 text-sm font-medium">Bản quyền thuộc về Nhutcoder. Master Tools 2024-2025.</p>
+              <p className="text-slate-500 text-sm font-medium">Bản quyền © 2024-2026. Một sản phẩm chất lượng từ Nhutcoder.</p>
+              <div className="flex gap-4">
+                <a 
+                  href="https://github.com/nhut0902-pr" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-colors text-xs font-bold uppercase tracking-widest border border-slate-100 px-4 py-2 rounded-xl"
+                >
+                  <Github size={16} />
+                  Github Profile
+                </a>
+              </div>
             </div>
             <div className="flex items-center gap-4 bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100">
                <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white text-xl font-black shadow-lg">N</div>
                <div className="flex flex-col text-left">
                   <p className="font-black text-slate-900 leading-none">Nhutcoder</p>
-                  <span className="text-red-500 text-[10px] font-bold uppercase tracking-widest mt-1">Master Engineer</span>
+                  <span className="text-red-500 text-[10px] font-bold uppercase tracking-widest mt-1">Master Software Engineer</span>
                </div>
             </div>
           </div>
