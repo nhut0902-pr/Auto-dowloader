@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   FileUp, 
@@ -68,11 +67,13 @@ const App: React.FC = () => {
   };
 
   const processPdf = async (file: File) => {
+    if (!file) return;
     setState(prev => ({ ...prev, isProcessing: true, fileName: file.name.replace('.pdf', ''), pages: [] }));
     
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
       const numPages = pdf.numPages;
       const pages: PdfPage[] = [];
 
@@ -82,29 +83,32 @@ const App: React.FC = () => {
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        await page.render({ canvasContext: context!, viewport }).promise;
+        if (context) {
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+          await page.render({ canvasContext: context, viewport }).promise;
+          
+          const dataUrl = canvas.toDataURL(state.format, state.quality);
+          pages.push({
+            index: i,
+            dataUrl,
+            width: viewport.width,
+            height: viewport.height,
+            selected: true
+          });
+        }
         
-        const dataUrl = canvas.toDataURL(state.format, state.quality);
-        pages.push({
-          index: i,
-          dataUrl,
-          width: viewport.width,
-          height: viewport.height,
-          selected: true
-        });
-        
-        if (i % 5 === 0 || i === numPages) {
-          setState(prev => ({ ...prev, pages: [...pages] }));
+        // Cập nhật giao diện theo đợt để mượt mà hơn
+        if (i % 3 === 0 || i === numPages) {
+          const currentPages = [...pages];
+          setState(prev => ({ ...prev, pages: currentPages }));
         }
       }
       
-      setState(prev => ({ ...prev, isProcessing: false, pages }));
+      setState(prev => ({ ...prev, isProcessing: false }));
     } catch (error) {
       console.error('Error processing PDF:', error);
-      alert('Có lỗi xảy ra khi đọc file PDF. Hãy thử lại với file khác.');
+      alert('Có lỗi xảy ra khi đọc file PDF. Hãy đảm bảo file không bị hỏng và thử lại.');
       setState(prev => ({ ...prev, isProcessing: false }));
     }
   };
@@ -134,8 +138,8 @@ const App: React.FC = () => {
           alert('Không tìm thấy video TikTok hoặc link không hợp lệ.');
         }
       } else if (mode === 'youtube') {
-        const vidIdMatch = inputUrl.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?(.+)/);
-        const vidId = vidIdMatch?.[1]?.split('&')[0]?.split('?')[0];
+        const vidIdMatch = inputUrl.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtu\.be)\/(?:watch\?v=)?([^?&/]+)/);
+        const vidId = vidIdMatch?.[1];
         
         if (!vidId) {
           alert('Link YouTube không hợp lệ.');
@@ -145,18 +149,18 @@ const App: React.FC = () => {
 
         setResult({
           id: vidId,
-          title: "Video YouTube",
+          title: "Video YouTube đã sẵn sàng",
           author: "YouTube Creator",
           cover: `https://img.youtube.com/vi/${vidId}/maxresdefault.jpg`,
           formats: [
-            { quality: 'Video MP4 (720p)', url: `https://api.vve.pw/api/button/mp4/${vidId}`, type: 'video' },
-            { quality: 'Âm thanh MP3', url: `https://api.vve.pw/api/button/mp3/${vidId}`, type: 'audio' }
+            { quality: 'Video MP4 (Chất lượng cao)', url: `https://api.vve.pw/api/button/mp4/${vidId}`, type: 'video' },
+            { quality: 'Âm thanh MP3 (320kbps)', url: `https://api.vve.pw/api/button/mp3/${vidId}`, type: 'audio' }
           ]
         });
       }
     } catch (error) {
       console.error('Download Error:', error);
-      alert('Lỗi kết nối server. Vui lòng thử lại sau.');
+      alert('Lỗi kết nối máy chủ. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
@@ -169,8 +173,10 @@ const App: React.FC = () => {
     if (selectedPages.length === 1) {
       const link = document.createElement('a');
       link.href = selectedPages[0].dataUrl;
-      link.download = `${state.fileName}_page_${selectedPages[0].index}.${state.format === OutputFormat.PNG ? 'png' : 'jpg'}`;
+      link.download = `${state.fileName}_trang_${selectedPages[0].index}.${state.format === OutputFormat.PNG ? 'png' : 'jpg'}`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
       return;
     }
 
@@ -185,7 +191,9 @@ const App: React.FC = () => {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(content);
     link.download = `${state.fileName}_images.zip`;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
   };
 
   const downloadTikTokImagesZip = async () => {
@@ -195,17 +203,22 @@ const App: React.FC = () => {
     try {
       const zip = new JSZip();
       const folder = zip.folder("tiktok_photos");
+      if (!folder) throw new Error("Could not create zip folder");
+
       const promises = result.images.map(async (url, index) => {
         const response = await fetch(url);
         const blob = await response.blob();
         folder.file(`photo_${index + 1}.jpg`, blob);
       });
+      
       await Promise.all(promises);
       const content = await zip.generateAsync({ type: "blob" });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(content);
       link.download = `TikTok_Photos_${Date.now()}.zip`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error("ZIP Error:", error);
       alert("Lỗi khi nén ảnh.");
@@ -238,7 +251,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
+    <div className="min-h-screen flex flex-col bg-slate-50 font-sans">
       <header className="bg-white border-b sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-auto lg:h-20 flex flex-col lg:flex-row items-center justify-between gap-4 py-4 lg:py-0">
           <div className="flex items-center gap-3">
@@ -249,7 +262,7 @@ const App: React.FC = () => {
               <h1 className="text-xl font-black text-slate-800 tracking-tight uppercase">
                 Nhutcoder <span className="text-red-600">Toolbox</span>
               </h1>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">V.5.1 Build</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">V.5.2 Stable Build</span>
             </div>
           </div>
 
@@ -262,7 +275,7 @@ const App: React.FC = () => {
               <button 
                 key={tab.id}
                 onClick={() => { setMode(tab.id as AppMode); resetResult(); }}
-                className={`whitespace-nowrap flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${mode === tab.id ? 'bg-white text-red-600 shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`whitespace-nowrap flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${mode === tab.id ? 'tab-active' : 'text-slate-500 hover:text-slate-800'}`}
               >
                 {tab.icon}
                 {tab.label}
@@ -277,10 +290,13 @@ const App: React.FC = () => {
           state.pages.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 sm:py-20 animate-in fade-in duration-700">
               <div className="text-center mb-10 max-w-2xl">
-                <h2 className="text-4xl sm:text-6xl font-black text-slate-900 mb-6 tracking-tight uppercase">
+                <h2 className="text-4xl sm:text-6xl font-black text-slate-900 mb-6 tracking-tight uppercase leading-tight">
                   PDF Sang <span className="text-red-600 underline decoration-red-100">Ảnh</span>
                 </h2>
-                <p className="text-lg text-slate-500 font-medium">Chuyển đổi từng trang PDF sang PNG/JPG chất lượng cao (Không dùng AI).</p>
+                <p className="text-lg text-slate-500 font-medium italic">"Tốc độ cao, bảo mật, hoàn toàn ngoại tuyến."</p>
+                <div className="mt-4 inline-block bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
+                  Privacy First • No AI Required
+                </div>
               </div>
 
               <form 
@@ -292,11 +308,11 @@ const App: React.FC = () => {
                 <input ref={fileInputRef} type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files?.[0] && processPdf(e.target.files[0])} />
                 <div className="bg-red-50 p-10 rounded-[2.5rem] text-red-600 mb-8 group-hover:rotate-6 transition-transform duration-300 shadow-inner"><FileUp size={64} /></div>
                 <p className="text-2xl font-black text-slate-800 mb-2">Thả file PDF vào đây</p>
-                <p className="text-slate-400 font-bold text-sm tracking-widest uppercase">Hoàn toàn bảo mật & Xử lý cục bộ</p>
+                <p className="text-slate-400 font-bold text-sm tracking-widest uppercase">Nhấn để chọn file từ thiết bị</p>
                 {state.isProcessing && (
                   <div className="mt-10 flex flex-col items-center">
                     <Loader2 className="animate-spin text-red-600 mb-4" size={48} />
-                    <span className="font-bold text-slate-700 text-lg">Đang trích xuất ảnh...</span>
+                    <span className="font-bold text-slate-700 text-lg">Đang trích xuất dữ liệu...</span>
                   </div>
                 )}
               </form>
@@ -370,7 +386,7 @@ const App: React.FC = () => {
                   </div>
                   <input 
                     type="url" 
-                    placeholder={mode === 'tiktok' ? "Dán link video TikTok..." : "Dán link video YouTube..."}
+                    placeholder={mode === 'tiktok' ? "Dán link video TikTok tại đây..." : "Dán link video YouTube tại đây..."}
                     className="block w-full pl-16 pr-44 py-6 bg-white border-4 border-slate-100 rounded-[2rem] focus:ring-8 focus:ring-red-50 focus:border-red-500 transition-all outline-none text-slate-800 font-bold text-lg shadow-xl shadow-slate-200"
                     value={inputUrl}
                     onChange={(e) => setInputUrl(e.target.value)}
@@ -382,7 +398,7 @@ const App: React.FC = () => {
                     className="absolute right-3 top-3 bottom-3 bg-slate-900 text-white px-10 rounded-2xl hover:bg-red-600 transition-all duration-300 font-black flex items-center gap-2 disabled:opacity-50"
                   >
                     {loading ? <Loader2 className="animate-spin" size={20} /> : <Play size={20} className="fill-white" />}
-                    <span className="hidden sm:inline">Tải Ngay</span>
+                    <span className="hidden sm:inline">Phân Tích</span>
                   </button>
                 </div>
               </form>
@@ -391,7 +407,7 @@ const App: React.FC = () => {
                 <div className="w-full bg-white rounded-[3rem] border-4 border-slate-100 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 max-w-4xl">
                   <div className="p-8 sm:p-12 flex flex-col md:flex-row gap-12">
                     <div className="w-full md:w-[320px] shrink-0 aspect-video md:aspect-[9/16] bg-slate-900 rounded-[2.5rem] overflow-hidden relative shadow-2xl group">
-                      <img src={result.cover} className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-700" alt="Cover" />
+                      {result.cover && <img src={result.cover} className="w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-700" alt="Cover" />}
                     </div>
                     
                     <div className="flex-1 flex flex-col justify-center">
@@ -406,7 +422,7 @@ const App: React.FC = () => {
                               <button 
                                 onClick={downloadTikTokImagesZip}
                                 disabled={isZipping}
-                                className="w-full flex items-center justify-center gap-4 bg-red-600 text-white py-6 rounded-3xl font-black text-xl hover:bg-red-700 transition-all shadow-2xl shadow-red-200"
+                                className="w-full flex items-center justify-center gap-4 bg-red-600 text-white py-6 rounded-3xl font-black text-xl hover:bg-red-700 transition-all shadow-2xl shadow-red-200 disabled:opacity-50"
                               >
                                 {isZipping ? <Loader2 size={24} className="animate-spin" /> : <FolderArchive size={24} />}
                                 TẢI ZIP ẢNH ({result.images.length})
@@ -414,7 +430,7 @@ const App: React.FC = () => {
                             ) : result.url && (
                               <a href={result.url} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-4 bg-red-600 text-white py-6 rounded-3xl font-black text-xl hover:bg-red-700 transition-all shadow-2xl shadow-red-200">
                                 <Download size={24} />
-                                TẢI VIDEO (NO LOGO)
+                                TẢI VIDEO (KHÔNG LOGO)
                               </a>
                             )}
                           </>
@@ -447,7 +463,7 @@ const App: React.FC = () => {
           <div className="flex flex-col md:flex-row items-center justify-between gap-12 text-center md:text-left">
             <div className="flex flex-col items-center md:items-start gap-4">
               <span className="font-black text-2xl text-slate-800 uppercase tracking-tighter">Nhutcoder Toolbox</span>
-              <p className="text-slate-500 text-sm font-medium">Bản quyền thuộc về Nhutcoder. Master Tools 2024.</p>
+              <p className="text-slate-500 text-sm font-medium">Bản quyền thuộc về Nhutcoder. Master Tools 2024-2025.</p>
             </div>
             <div className="flex items-center gap-4 bg-slate-50 p-6 rounded-[2rem] border-2 border-slate-100">
                <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white text-xl font-black shadow-lg">N</div>
