@@ -68,6 +68,13 @@ const App: React.FC = () => {
 
   const processPdf = async (file: File) => {
     if (!file) return;
+    
+    // Check if library is loaded
+    if (typeof pdfjsLib === 'undefined') {
+      alert('Thư viện PDF chưa tải xong. Vui lòng đợi vài giây rồi thử lại.');
+      return;
+    }
+
     setState(prev => ({ ...prev, isProcessing: true, fileName: file.name.replace('.pdf', ''), pages: [] }));
     
     try {
