@@ -11,7 +11,6 @@ import {
   Play, 
   Loader2, 
   FolderArchive, 
-  FileImage, 
   Youtube, 
   Music, 
   Monitor, 
@@ -293,9 +292,9 @@ const App: React.FC = () => {
                 <h2 className="text-4xl sm:text-6xl font-black text-slate-900 mb-6 tracking-tight uppercase leading-tight">
                   PDF Sang <span className="text-red-600 underline decoration-red-100">Ảnh</span>
                 </h2>
-                <p className="text-lg text-slate-500 font-medium italic">"Xử lý cục bộ trên trình duyệt, không tải file lên máy chủ."</p>
+                <p className="text-lg text-slate-500 font-medium italic">"Xử lý cục bộ (Local), 100% không sử dụng AI."</p>
                 <div className="mt-4 inline-block bg-emerald-50 text-emerald-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-emerald-100">
-                  Privacy First • Offline Conversion
+                  Privacy Focused • No Data Uploads
                 </div>
               </div>
 
